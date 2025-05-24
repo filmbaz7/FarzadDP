@@ -10,7 +10,7 @@ def run_spider():
         }
     })
 
-    class CustomSpider(JDSpider):
+    class CustomSpider(JDSportsSpider):
         def parse(self, response):
             # فرض کن اسپایدر تخفیف‌ها رو می‌گیره و اینجا ذخیره می‌کنیم
             for item in super().parse(response):
