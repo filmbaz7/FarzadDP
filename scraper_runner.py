@@ -1,5 +1,5 @@
 from scrapy.crawler import CrawlerProcess
-from jdsports_spider import JDSpider
+from jdsports_spider import JDSportsSpider
 from db_helper import save_discount
 
 def run_spider():
