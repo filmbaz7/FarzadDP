@@ -6,7 +6,7 @@ from jdsports_spider import JDSportsSpider
 items = []
 
 class FilteredSpider(JDSportsSpider):
-    name = "filtered_spider"
+    name = "filtered_jdsports"
 
     def parse(self, response):
         for result in super().parse(response):
@@ -14,7 +14,7 @@ class FilteredSpider(JDSportsSpider):
                 items.append(result)
                 yield result
             else:
-                yield result  # مثل Request برای صفحات بعد
+                yield result  # صفحات بعدی
 
 def run_spider():
     global items
