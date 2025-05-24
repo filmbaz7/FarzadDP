@@ -29,7 +29,7 @@ def discount_job():
         logging.info("Checking discounts...")
         discounts = get_top_discounts()
         if discounts:
-            message = "🔥 تخفیف‌های بالای ۳۰٪:
+            message = "🔥 تخفیف‌های بالای ۳۰٪:"
 
 "
             for name, discount, link in discounts:
