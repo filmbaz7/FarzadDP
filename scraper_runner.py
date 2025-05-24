@@ -1,10 +1,9 @@
-import asyncio
 from scrapy.crawler import CrawlerRunner
-from twisted.internet import asyncioreactor, defer
+from twisted.internet import asyncioreactor, defer, reactor
 from jdsports_spider import JDSportsSpider
 from db_helper import save_discount
 
-# حتما اول ری‌اکتور asyncio نصب بشه، قبل از هرچیز
+# حتما اول ری‌اکتور asyncio نصب بشه
 asyncioreactor.install()
 
 runner = CrawlerRunner(settings={
@@ -21,12 +20,6 @@ class CustomSpider(JDSportsSpider):
             yield item
 
 @defer.inlineCallbacks
-def crawl():
+def run_spider():
     yield runner.crawl(CustomSpider)
-    # اگر کرولرهای دیگه‌ای بود اینجا می‌تونی اضافه کنی
-    reactor.stop()  # وقتی تموم شد، ری‌اکتور رو متوقف کن
-
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    crawl()
-    reactor.run()
+    reactor.stop()
