@@ -1,10 +1,17 @@
+# ✅ این خط باید قبل از هر ایمپورتی باشه که از twisted استفاده می‌کنه
+import sys
+if "twisted.internet.reactor" in sys.modules:
+    raise RuntimeError("reactor already installed before asyncioreactor.install()")
+
+# ری‌اکتور رو خیلی زود نصب کن
+from twisted.internet import asyncioreactor
+asyncioreactor.install()
+
+# حالا بقیه ماژول‌ها رو ایمپورت کن
 from scrapy.crawler import CrawlerRunner
-from twisted.internet import asyncioreactor, defer, reactor
+from twisted.internet import defer, reactor
 from jdsports_spider import JDSportsSpider
 from db_helper import save_discount
-
-# حتما اول ری‌اکتور asyncio نصب بشه
-asyncioreactor.install()
 
 runner = CrawlerRunner(settings={
     'LOG_ENABLED': True,
