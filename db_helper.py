@@ -1,41 +1,41 @@
 import sqlite3
-import logging
+from contextlib import closing
 
-DB_FILE = "users.db"
+DB_PATH = 'discounts.db'
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS discounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            price_was REAL,
-            price_is REAL,
-            discount INTEGER,
-            link TEXT,
-            image TEXT
-        )
-    ''')
-    conn.commit()
-    conn.close()
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS discounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT,
+                    link TEXT,
+                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    user_id INTEGER PRIMARY KEY
+                )
+            ''')
 
-def save_discounts(items):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("DELETE FROM discounts")  # پاک کردن داده‌های قبلی
-    for item in items:
-        c.execute('''
-            INSERT INTO discounts (name, price_was, price_is, discount, link, image)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (item["name"], item["priceWas"], item["priceIs"], item["discount"], item["link"], item["image"]))
-    conn.commit()
-    conn.close()
+def add_user(user_id):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('INSERT OR IGNORE INTO users (user_id) VALUES (?)', (user_id,))
 
-def get_top_discounts(min_discount=30):
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT name, discount, link FROM discounts WHERE discount >= ? ORDER BY discount DESC", (min_discount,))
-    results = c.fetchall()
-    conn.close()
-    return results
+def save_discount(title, link):
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        with conn:
+            conn.execute('INSERT INTO discounts (title, link) VALUES (?, ?)', (title, link))
+
+def get_discounts():
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        cur = conn.execute('SELECT title, link FROM discounts ORDER BY timestamp DESC')
+        return cur.fetchall()
+
+def get_users():
+    with closing(sqlite3.connect(DB_PATH)) as conn:
+        cur = conn.execute('SELECT user_id FROM users')
+        return [row[0] for row in cur.fetchall()]
