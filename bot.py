@@ -3,14 +3,20 @@ from flask import Flask, request
 import telegram
 import threading
 import time
+import subprocess
 from db_helper import init_db, add_user, get_users, get_discounts
-from scraper_runner import run_spider  # این تابع Scrapy رو اجرا می‌کنه
 
 TOKEN = '7578063108:AAFZGQydjiQJImIaSi3uwUmE2_EA9yATrgE'
 bot = telegram.Bot(token=TOKEN)
 app = Flask(__name__)
 
 init_db()
+
+def run_spider_subprocess():
+    try:
+        subprocess.run(["python", "run_spider.py"], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"خطا در اجرای اسپایدر: {e}")
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -28,11 +34,11 @@ def webhook():
         bot.send_message(chat_id, "سلام! برای دریافت تخفیف‌ها دستور /discounts رو ارسال کن.")
     elif text == '/discounts':
         bot.send_message(chat_id, "در حال دریافت آخرین تخفیف‌ها، لطفاً چند لحظه صبر کنید...")
+
         try:
-            # اجرای اسپایدر در ترد جداگانه تا بلاک نشه
-            spider_thread = threading.Thread(target=run_spider)
-            spider_thread.start()
-            spider_thread.join(timeout=30)  # نهایت ۳۰ ثانیه صبر می‌کنه
+            thread = threading.Thread(target=run_spider_subprocess)
+            thread.start()
+            thread.join(timeout=30)
 
             discounts = get_discounts()
             if discounts:
@@ -49,9 +55,9 @@ def webhook():
 
 def send_periodic_discounts():
     while True:
-        time.sleep(180)  # هر 3 دقیقه
+        time.sleep(180)
         try:
-            run_spider()
+            run_spider_subprocess()
             users = get_users()
             discounts = get_discounts()
             if not discounts:
@@ -66,7 +72,5 @@ def send_periodic_discounts():
             print(f"خطا در اجرای ارسال دوره‌ای: {e}")
 
 if __name__ == '__main__':
-    thread = threading.Thread(target=send_periodic_discounts, daemon=True)
-    thread.start()
-
+    threading.Thread(target=send_periodic_discounts, daemon=True).start()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
