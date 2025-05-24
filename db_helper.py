@@ -6,14 +6,12 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
 
-    # جدول کاربران
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             chat_id INTEGER PRIMARY KEY
         )
     ''')
 
-    # جدول تخفیف‌ها
     c.execute('''
         CREATE TABLE IF NOT EXISTS discounts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +46,7 @@ def get_users():
 def save_discounts(items):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("DELETE FROM discounts")  # تخفیف‌های قبلی پاک می‌شن
+    c.execute("DELETE FROM discounts")
     for item in items:
         c.execute('''
             INSERT INTO discounts (name, priceWas, priceIs, difference, discount, link, image)
