@@ -1,72 +1,63 @@
 from flask import Flask, request
-import requests
 import logging
+import requests
 import os
-import threading
-import time
-from db_helper import init_db, get_top_discounts, save_discounts
 from scraper_runner import run_spider
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+TELEGRAM_API_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    logging.error("❌ Error: BOT_TOKEN environment variable is not set!")
-    exit(1)
-
-TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
-user_chat_ids = set()
+def split_message(text, max_length=4000):
+    return [text[i:i+max_length] for i in range(0, len(text), max_length)]
 
 def send_message(chat_id, text):
-    url = f'{TELEGRAM_API_URL}/sendMessage'
-    payload = {'chat_id': chat_id, 'text': text}
-    resp = requests.post(url, json=payload)
-    if not resp.ok:
-        logging.error(f"❌ Failed to send message to {chat_id}: {resp.text}")
+    for chunk in split_message(text):
+        res = requests.post(
+            f"{TELEGRAM_API_URL}/sendMessage",
+            json={"chat_id": chat_id, "text": chunk}
+        )
+        if not res.ok:
+            logger.error(f"❌ Failed to send message: {res.text}")
 
-def discount_job():
-    while True:
-        logging.info("🔎 Checking discounts...")
-        discounts = get_top_discounts()
-        if discounts:
-            message = "🔥 تخفیف‌های بالای ۳۰٪:\n\n"
-            for name, discount, link in discounts:
-                message += f"{name} - {discount}%\n{link}\n\n"
-            for chat_id in user_chat_ids:
-                send_message(chat_id, message)
-        else:
-            logging.info("🚫 No discounts found.")
-        time.sleep(180)
+@app.route('/')
+def index():
+    return "✅ Bot is running!"
 
-def scrape_and_save():
-    logging.info("⚙️ Running spider to get latest discounts...")
-    items = run_spider()
-    save_discounts(items)
-    logging.info(f"✅ Saved {len(items)} discounts to DB.")
-
-@app.route('/', methods=['GET'])
-def home():
-    return 'Bot is running!', 200
-
-@app.route('/webhook', methods=['POST'])
+@app.route('/webhook', methods=["POST"])
 def webhook():
-    update = request.get_json()
-    logging.info(f"📩 Received update: {update}")
-    if 'message' in update:
-        chat_id = update['message']['chat']['id']
-        text = update['message'].get('text', '')
+    data = request.get_json()
+    logger.info(f"📩 Received: {data}")
 
-        if text == '/start':
-            user_chat_ids.add(chat_id)
-            send_message(chat_id, 'سلام! شما به دریافت‌کنندگان تخفیف‌های ویژه اضافه شدید.')
+    message = data.get("message", {})
+    text = message.get("text", "")
+    chat_id = message.get("chat", {}).get("id")
+
+    if text == "/start":
+        send_message(chat_id, "⏳ در حال جستجوی تخفیف‌ها...")
+
+        results = run_spider()
+
+        if not results:
+            send_message(chat_id, "❌ چیزی پیدا نشد با تخفیف بالای ۳۰٪")
         else:
-            send_message(chat_id, f'پیام شما دریافت شد: {text}')
-    return 'ok', 200
+            msg = "🎯 تخفیف‌های بالای ۳۰٪:\n\n"
+            for item in results:
+                msg += (
+                    f"🛍️ {item['name']}\n"
+                    f"💸 قیمت: {item['priceIs']}€ (قبل: {item['priceWas']}€)\n"
+                    f"📉 تخفیف: {item['discount']}٪ ({round(item['difference'],2)}€)\n"
+                    f"🔗 {item['link']}\n\n"
+                )
+            send_message(chat_id, msg)
 
-if __name__ == '__main__':
-    init_db()
-    scrape_and_save()  # اجرا یکبار قبل از شروع سرور
-    threading.Thread(target=discount_job, daemon=True).start()
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    return "", 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
