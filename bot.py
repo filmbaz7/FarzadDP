@@ -5,16 +5,17 @@ import os
 import threading
 import time
 from db_helper import init_db, get_top_discounts
+from scraper_runner import run_spider  # ⬅ اضافه کردن اسکرپر
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
-    logging.error("Error: BOT_TOKEN environment variable is not set!")
+    logging.error("❌ Error: BOT_TOKEN environment variable is not set!")
     exit(1)
-TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 
+TELEGRAM_API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}'
 user_chat_ids = set()
 
 def send_message(chat_id, text):
@@ -22,21 +23,20 @@ def send_message(chat_id, text):
     payload = {'chat_id': chat_id, 'text': text}
     resp = requests.post(url, json=payload)
     if not resp.ok:
-        logging.error(f"Failed to send message to {chat_id}: {resp.text}")
+        logging.error(f"❌ Failed to send message to {chat_id}: {resp.text}")
 
 def discount_job():
     while True:
-        logging.info("Checking discounts...")
+        logging.info("🔎 Checking discounts...")
         discounts = get_top_discounts()
         if discounts:
-            message = "🔥 تخفیف‌های بالای ۳۰٪:"
-
+            message = "🔥 تخفیف‌های بالای ۳۰٪:\n\n"
             for name, discount, link in discounts:
                 message += f"{name} - {discount}%\n{link}\n\n"
             for chat_id in user_chat_ids:
                 send_message(chat_id, message)
         else:
-            logging.info("No discounts found.")
+            logging.info("🚫 No discounts found.")
         time.sleep(180)
 
 @app.route('/', methods=['GET'])
@@ -46,7 +46,7 @@ def home():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
-    logging.info(f"Received update: {update}")
+    logging.info(f"📩 Received update: {update}")
     if 'message' in update:
         chat_id = update['message']['chat']['id']
         text = update['message'].get('text', '')
@@ -60,6 +60,7 @@ def webhook():
 
 if __name__ == '__main__':
     init_db()
+    run_spider()  # ⬅ اجرای اسکرپر قبل از شروع job
     threading.Thread(target=discount_job, daemon=True).start()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
