@@ -9,11 +9,11 @@ class CustomSpider(JDSportsSpider):
         for item in super().parse(response):
             if item["discount"] >= 30:
                 items.append(item)
-                yield item  # مهم برای ذخیره آیتم‌ها توسط Scrapy
+                yield item
 
 def run_spider():
     global items
-    items = []  # ریست قبل از اجرای هر بار
+    items = []
     process = CrawlerProcess(get_project_settings())
     process.crawl(CustomSpider)
     process.start()
