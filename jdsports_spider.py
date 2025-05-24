@@ -5,44 +5,36 @@ class JDSportsSpider(scrapy.Spider):
     start_urls = ["https://www.jdsports.it/saldi/"]
 
     def parse(self, response):
-        print(">>> Spider parsing...")
-        items = []
+        products = response.css("div.productListItem")
+        for product in products:
+            name = product.css("div.itemTitle a::text").get()
+            price_was_text = product.css("div.was span::text").get()
+            price_is_text = product.css("div.now span::text").get()
 
-        for product in response.css("span.itemContainer"):
-            name = product.css("span.itemTitle a::text").get()
-            priceWasText = product.css("span.was span::text").get()
-            priceIsText = product.css("span.now span::text").get()
-
-            if not priceWasText or not priceIsText:
+            if not price_was_text or not price_is_text:
                 continue
 
             try:
-                priceWas = float(priceWasText.replace("€", "").replace(",", ".").strip())
-                priceIs = float(priceIsText.replace("€", "").replace(",", ".").strip())
+                price_was = float(price_was_text.replace("€", "").replace(",", ".").strip())
+                price_is = float(price_is_text.replace("€", "").replace(",", ".").strip())
             except ValueError:
                 continue
 
-            discount = round((priceWas - priceIs) * 100 / priceWas, 0)
-            difference = priceWas - priceIs
-            link = response.urljoin(product.css("a.itemImage").attrib.get("href", ""))
-            image = response.urljoin(product.css("img.thumbnail").attrib.get("src", ""))
+            discount = round((price_was - price_is) * 100 / price_was, 0)
+            difference = price_was - price_is
+            link = response.urljoin(product.css("a.itemImage::attr(href)").get())
+            image = response.urljoin(product.css("img.thumbnail::attr(src)").get())
 
-            item = {
+            yield {
                 "name": name,
-                "priceWas": priceWas,
-                "priceIs": priceIs,
+                "priceWas": price_was,
+                "priceIs": price_is,
                 "difference": difference,
                 "discount": discount,
                 "link": link,
                 "image": image,
             }
-            print(f">>> Item: {item}")
-            items.append(item)
 
-        # ذخیره محلی (در حافظه موقتی)
-        self.crawler.stats.set_value('scraped_items', items)
-
-        # صفحه بعد
         next_page = response.css("a.btn.btn-default.pageNav[rel='next']::attr(href)").get()
         if next_page:
             yield response.follow(next_page, self.parse)
