@@ -4,8 +4,8 @@ import logging
 import os
 import threading
 import time
-from db_helper import init_db, get_top_discounts
-from scraper_runner import run_spider  # ⬅ اضافه کردن اسکرپر
+from db_helper import init_db, get_top_discounts, save_discounts
+from scraper_runner import run_spider
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +39,12 @@ def discount_job():
             logging.info("🚫 No discounts found.")
         time.sleep(180)
 
+def scrape_and_save():
+    logging.info("⚙️ Running spider to get latest discounts...")
+    items = run_spider()
+    save_discounts(items)
+    logging.info(f"✅ Saved {len(items)} discounts to DB.")
+
 @app.route('/', methods=['GET'])
 def home():
     return 'Bot is running!', 200
@@ -60,7 +66,7 @@ def webhook():
 
 if __name__ == '__main__':
     init_db()
-    run_spider()  # ⬅ اجرای اسکرپر قبل از شروع job
+    scrape_and_save()  # اجرا یکبار قبل از شروع سرور
     threading.Thread(target=discount_job, daemon=True).start()
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
