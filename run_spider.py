@@ -1,32 +1,38 @@
-from scrapy.crawler import CrawlerProcess
-from scrapy.utils.project import get_project_settings
+import scrapy
+from scrapy.crawler import CrawlerRunner
+from crochet import setup, wait_for
 from jdsports_spider import JDSportsSpider
 from db_helper import save_discounts
-from twisted.internet import reactor
-from crochet import setup, wait_for
+
+# راه‌اندازی Crochet برای استفاده از Twisted در اپلیکیشن معمولی
 setup()
 
-@wait_for(timeout=60.0)
+@wait_for(timeout=30.0)
 def run_spider():
-    items_collected = []
+    from scrapy import signals
 
-    def handle_result(item, response, spider):
-        items_collected.append(item)
+    items = []
 
-    process = CrawlerProcess(settings={
-        "LOG_ENABLED": False,
-        "ITEM_PIPELINES": {},
-    })
+    # زمانی که هر آیتم scrape شد این تابع فراخوانی میشه
+    def handle_result(item):
+        items.append(item)
 
-    crawler = process.create_crawler(JDSportsSpider)
+    # اجرای spider
+    runner = CrawlerRunner()
+    crawler = runner.create_crawler(JDSportsSpider)
     crawler.signals.connect(handle_result, signal=scrapy.signals.item_scraped)
-    process.crawl(crawler)
-    process.start()
 
-    return items_collected
+    d = runner.crawl(crawler)
+    return items
+
 
 if __name__ == '__main__':
     print(">>> Spider started...")
-    items = run_spider()
-    print(f">>> Found {len(items)} items")
-    save_discounts(items)
+    try:
+        items = run_spider()
+        print(f">>> Found {len(items)} products on this page")
+        for item in items:
+            print(f">>> Item: {item}")
+        save_discounts(items)
+    except Exception as e:
+        print(f">>> Spider error: {e}")
