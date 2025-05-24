@@ -21,5 +21,5 @@ def run_spider():
     items = []
     process = CrawlerProcess(get_project_settings())
     process.crawl(FilteredSpider)
-    process.start()
+    process.start(stop_after_crawl=True)  # ✅ این تغییر لازمه برای اجرای صحیح روی سرور
     return items
