@@ -5,7 +5,12 @@ class JDSportsSpider(scrapy.Spider):
     start_urls = ["https://www.jdsports.it/saldi/"]
 
     def parse(self, response):
-        for product in response.css("span.itemContainer"):
+        print(">>> Spider parsing...")
+
+        products = response.css("span.itemContainer")
+        print(f">>> Found {len(products)} products on this page")
+
+        for product in products:
             name = product.css("span.itemTitle a::text").get()
             priceWasText = product.css("span.was span::text").get()
             priceIsText = product.css("span.now span::text").get()
@@ -24,7 +29,7 @@ class JDSportsSpider(scrapy.Spider):
             link = response.urljoin(product.css("a.itemImage").attrib.get("href", ""))
             image = response.urljoin(product.css("img.thumbnail").attrib.get("src", ""))
 
-            yield {
+            item = {
                 "name": name,
                 "priceWas": priceWas,
                 "priceIs": priceIs,
@@ -33,7 +38,12 @@ class JDSportsSpider(scrapy.Spider):
                 "link": link,
                 "image": image,
             }
+            print(f">>> Item: {item}")
+            yield item
 
         next_page = response.css("a.btn.btn-default.pageNav[rel='next']::attr(href)").get()
         if next_page:
+            print(f">>> Following next page: {next_page}")
             yield response.follow(next_page, self.parse)
+        else:
+            print(">>> No more pages to follow.")
