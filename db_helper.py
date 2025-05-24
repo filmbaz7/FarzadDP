@@ -20,6 +20,18 @@ def init_db():
     conn.commit()
     conn.close()
 
+def save_discounts(items):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("DELETE FROM discounts")  # پاک کردن داده‌های قبلی
+    for item in items:
+        c.execute('''
+            INSERT INTO discounts (name, price_was, price_is, discount, link, image)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (item["name"], item["priceWas"], item["priceIs"], item["discount"], item["link"], item["image"]))
+    conn.commit()
+    conn.close()
+
 def get_top_discounts(min_discount=30):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
