@@ -31,7 +31,6 @@ def discount_job():
         if discounts:
             message = "🔥 تخفیف‌های بالای ۳۰٪:"
 
-"
             for name, discount, link in discounts:
                 message += f"{name} - {discount}%\n{link}\n\n"
             for chat_id in user_chat_ids:
