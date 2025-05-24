@@ -1,0 +1,17 @@
+from scrapy.crawler import CrawlerProcess
+from scrapy.utils.project import get_project_settings
+from jdsports_spider import JDSportsSpider
+
+items = []
+
+class CustomSpider(JDSportsSpider):
+    def parse(self, response):
+        for item in super().parse(response):
+            if item["discount"] >= 30:
+                items.append(item)
+
+def run_spider():
+    process = CrawlerProcess(get_project_settings())
+    process.crawl(CustomSpider)
+    process.start()
+    return items
